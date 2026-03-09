@@ -6,9 +6,9 @@ import numpy as np
 import pytest
 
 directory = os.path.dirname(__file__)
-sys.path.append(os.path.abspath(os.path.join(directory, "..")))
+sys.path.append(os.path.abspath(os.path.join(directory, "..", "src")))
 
-from hubbard_solve.hubbard import (
+from hubbardEd.analog import (
     basis_states,
     creation_operator,
     annihilation_operator,
