@@ -85,7 +85,9 @@ def test_hamiltonian_simple_case():
     """Test the Hamiltonian construction for L=2, N=2 with eigenvalue verification."""
     N, L, t, U = 2, 2, 1.0, 2.0
 
-    HH = hamiltonian(N, L, t, U)
+    HH = hamiltonian(
+        N, L, t, U
+    ).toarray()  # Convert sparse matrix to dense for testing since it is low-dimensional
     _, index_map = basis_states(N, L)
 
     target_states = [(1, 2), (2, 1), (3, 0), (0, 3)]

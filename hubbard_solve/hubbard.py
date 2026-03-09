@@ -3,6 +3,7 @@
 from itertools import product
 import numpy as np
 from numpy.typing import NDArray
+import scipy.sparse
 
 
 def basis_states(N: int, L: int):
@@ -77,7 +78,7 @@ def hamiltonian(N: int, L: int, t: float, U: float):
     """Construct the Hamiltonian matrix for the Hubbard model"""
     basis, index_map = basis_states(N, L)
     dim = len(basis)
-    HH = np.zeros((dim, dim), dtype=np.float64)
+    HH = scipy.sparse.lil_matrix((dim, dim), dtype=np.float64)
 
     # On-site interaction
     for basis_state in basis:
@@ -107,8 +108,7 @@ def hamiltonian(N: int, L: int, t: float, U: float):
                         HH[idx_bra, idx_ket] -= t * sign
 
     if L == 2:  # For L=2, the Hamiltonian is already symmetric
-        return HH
+        return HH.tocsr()
 
-    diag = np.diag(HH).copy()
-    HH_off = HH - np.diag(diag)
-    return HH_off + HH_off.T.conj() + np.diag(diag)
+    HH = (HH + HH.T - scipy.sparse.diags(HH.diagonal())).tocsr()
+    return HH
