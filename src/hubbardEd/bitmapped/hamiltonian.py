@@ -107,8 +107,8 @@ def bm_create_hamiltonian(N_up: int, N_down: int, L: int, t: float, U: float):
     return HH.tocsr()
 
 
-def bm_get_eigenstates(HH):
+def bm_get_eigenstates(HH, num_evals: int):
     """Return the eigenvalues and vectors of the given HH matrix, sorted in ascending order."""
-    evals, evecs = scipy.sparse.linalg.eigsh(HH, k=HH.shape[0] - 1, which="SA")
+    evals, evecs = scipy.sparse.linalg.eigsh(HH, k=num_evals, which="SA")
     idx = np.argsort(evals)
     return evals[idx], evecs[:, idx]
