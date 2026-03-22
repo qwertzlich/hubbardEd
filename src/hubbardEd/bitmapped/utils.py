@@ -1,9 +1,5 @@
 """Utility functions for bitmapped basis states in the Hubbard model."""
 
-import numpy as np
-from numpy.typing import NDArray
-import scipy.sparse
-
 
 def bit_flip(bin_state: int, site: int) -> int:
     """Flip the bit at the specified site in the given binary state."""

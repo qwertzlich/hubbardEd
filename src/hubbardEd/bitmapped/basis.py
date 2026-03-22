@@ -1,9 +1,18 @@
 """This module calculates the basis states for the hubbard model in bitmapped representation."""
 
 import numpy as np
+from numpy.typing import NDArray
+from typing import TypeAlias
 
 
-def bitmap_basis_states(num_sites: int, num_up: int, num_down: int):
+BasisState: TypeAlias = tuple[int, int]
+BasisArray: TypeAlias = NDArray[np.int64]
+IndexMap: TypeAlias = dict[BasisState, int]
+
+
+def bitmap_basis_states(
+    num_sites: int, num_up: int, num_down: int
+) -> tuple[BasisArray, IndexMap]:
     """Generate the basis states for a given number of sites and electrons in bitmapped representation.
     args:
         num_sites: The total number of sites in the system
@@ -18,4 +27,4 @@ def bitmap_basis_states(num_sites: int, num_up: int, num_down: int):
 
     index_map = {state: idx for idx, state in enumerate(basis)}
 
-    return np.array(basis), index_map
+    return np.array(basis, dtype=np.int64), index_map

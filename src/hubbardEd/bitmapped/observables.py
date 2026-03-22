@@ -1,19 +1,28 @@
-"""This module contains operators representing observables which my be used to calculate expectation values"""
+"""This module contains operators representing observables which may be used to calculate expectation values"""
 
 import numpy as np
-from hubbardEd.bitmapped import check_bit
+from numpy.typing import NDArray
+from typing import TypeAlias
+from .utils import check_bit
 
 
-def get_doublon_expectation(psi, basis_states, L):
+BasisState: TypeAlias = tuple[int, int]
+BasisArray: TypeAlias = NDArray[np.int64]
+StateVector: TypeAlias = NDArray[np.complex128]
+
+
+def get_doublon_expectation(
+    psi: StateVector, basis_states: BasisArray, L: int
+) -> list[float]:
     """Calculate the expectation value of doublon number operator per site for a given state psi and basis states.
-    args:
+    Args:
         psi: State vector in the given basis
         basis_states: List of basis states corresponding to the rows of psi
         L: The number of sites in the system
-    returns:
+    Returns:
         The expectation value of the doublon number operator
     """
-    psi = np.asarray(psi).reshape(-1)  # ensure psi is a 1D array
+    psi = np.asarray(psi, dtype=np.complex128).reshape(-1)  # ensure psi is a 1D array
     expectation = np.zeros(L, dtype=float)
 
     for idx, (up_state, down_state) in enumerate(basis_states):  # each dimension in psi
@@ -33,15 +42,16 @@ def get_doublon_expectation(psi, basis_states, L):
     return expectation.tolist()
 
 
-def get_LRC_expectation(psi, basis_states, L):
-    """Calculate the expectation value of the occupation number correlation betweend the two most distant sites for a given state psi and basis states.
-    args:
+def get_LRC_expectation(psi: StateVector, basis_states: BasisArray, L: int) -> float:
+    """Calculate the expectation value of the occupation number correlation between the two most distant sites for a given state psi and basis states.
+    Args:
         psi: State vector in the given basis
         basis_states: List of basis states corresponding to the rows of psi
         L: The number of sites in the system
-    returns:
+    Returns:
         The expectation value of the occupation number correlation between the two most distant sites
     """
+    psi = np.asarray(psi, dtype=np.complex128).reshape(-1)
     expectation = 0.0  # <n_1 n_L/2 >
     for idx, state in enumerate(basis_states):
         n1 = check_bit(state[0], 0) + check_bit(state[1], 0)

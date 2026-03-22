@@ -3,7 +3,7 @@
 import numpy as np
 from numpy.typing import NDArray
 import scipy.sparse
-from hubbardEd.analog import basis_states
+from .basis import basis_states
 
 
 def creation_operator(state: NDArray, site: int, spin: int):
