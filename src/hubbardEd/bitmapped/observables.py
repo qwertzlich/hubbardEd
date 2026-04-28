@@ -1,26 +1,22 @@
-"""This module contains operators representing observables which may be used to calculate expectation values"""
+"""Observable operators for the Spin-½ Fermi-Hubbard model with bitmapped basis representation."""
 
 import numpy as np
-from numpy.typing import NDArray
-from typing import TypeAlias
+
+from .types import BasisArray, StateVector
 from .utils import check_bit
-
-
-BasisState: TypeAlias = tuple[int, int]
-BasisArray: TypeAlias = NDArray[np.int64]
-StateVector: TypeAlias = NDArray[np.complex128]
 
 
 def get_doublon_expectation(
     psi: StateVector, basis_states: BasisArray, L: int
 ) -> list[float]:
-    """Calculate the expectation value of doublon number operator per site for a given state psi and basis states.
+    """Calculate site-resolved doublon expectation values for the Spin-½ Fermi-Hubbard model.
+    Returns the probability of finding both spins occupied at each site.
     Args:
         psi: State vector in the given basis
-        basis_states: List of basis states corresponding to the rows of psi
+        basis_states: List of basis states (up_bits, down_bits) tuples
         L: The number of sites in the system
     Returns:
-        The expectation value of the doublon number operator
+        List of doublon expectation values <n_{i↑} n_{i↓}> for each site i
     """
     psi = np.asarray(psi, dtype=np.complex128).reshape(-1)  # ensure psi is a 1D array
     expectation = np.zeros(L, dtype=float)
@@ -43,13 +39,14 @@ def get_doublon_expectation(
 
 
 def get_LRC_expectation(psi: StateVector, basis_states: BasisArray, L: int) -> float:
-    """Calculate the expectation value of the occupation number correlation between the two most distant sites for a given state psi and basis states.
+    """Calculate the long-range charge correlation <n_0 n_{L/2}> for the Spin-½ Fermi-Hubbard model.
+    Computes the correlation between site 0 and the middle site (L/2).
     Args:
         psi: State vector in the given basis
-        basis_states: List of basis states corresponding to the rows of psi
+        basis_states: List of basis states (up_bits, down_bits) tuples
         L: The number of sites in the system
     Returns:
-        The expectation value of the occupation number correlation between the two most distant sites
+        The expectation value of <n_0 n_{L/2}> (total occupation at both sites)
     """
     psi = np.asarray(psi, dtype=np.complex128).reshape(-1)
     expectation = 0.0  # <n_1 n_L/2 >

@@ -2,29 +2,23 @@
 
 import numpy as np
 from numpy.typing import NDArray
-from typing import Literal, TypeAlias
 import scipy.sparse
 from .utils import bit_flip, check_bit
 
-
-BasisState: TypeAlias = tuple[int, int]
-BasisArray: TypeAlias = NDArray[np.int64]
-IndexMap: TypeAlias = dict[BasisState, int]
-Spin: TypeAlias = Literal[1, 2]
-SparseMatrix: TypeAlias = scipy.sparse.csr_matrix
+from .types import BasisArray, BasisState, IndexMap, SparseMatrix, Spin
 
 
 def bm_hopping_operator(
     state: BasisState, site_from: int, site_to: int, spin: Spin
 ) -> BasisState | None:
-    """Hopping operator for the Hubbard model in bitmapped representation
+    """Apply fermionic hopping operator for the Spin-½ Fermi-Hubbard model in bitmapped representation.
     Args:
-        state: A tuple of two integers representing the occupation of up and down spins
+        state: A tuple of (up_bits, down_bits) representing occupation of up and down spins
         site_from: The site from which the electron hops
         site_to: The site to which the electron hops
         spin: The spin state (1 for up, 2 for down)
     Returns:
-        A new state after hopping, or None if the operation is not possible
+        A new state after hopping, or None if the operation violates occupation constraints
     """
     up_state, down_state = state
     if spin == 1:
@@ -45,9 +39,10 @@ def check_fermionic_sign(
     spin: Spin,
     is_boundary_hop: bool = False,
 ) -> int:
-    """Calculate the fermionic sign for hopping an electron from site_from to site_to in a given state
+    """Calculate the fermionic anticommutation sign for hopping in the Spin-½ Fermi-Hubbard model.
+    Counts occupied sites of the same spin between source and target to determine sign.
     Args:
-        state: A tuple of two integers representing the occupation of up and down spins
+        state: A tuple of (up_bits, down_bits) representing occupation of up and down spins
         site_from: The site from which the electron hops
         site_to: The site to which the electron hops
         spin: The spin state (1 for up, 2 for down)
@@ -74,13 +69,14 @@ def check_fermionic_sign(
 def create_interaction_matrix(
     basis: BasisArray, index_map: IndexMap, U: float
 ) -> SparseMatrix:
-    """Creates the interaction terms for the Hubbard Hamiltonian matrix based on the given basis and index mapping.
+    """Create the on-site interaction matrix for the Spin-½ Fermi-Hubbard model.
+    Diagonal matrix with U * (number of doubly-occupied sites) on each diagonal element.
     Args:
         basis: The basis states for the system
         index_map: A dictionary mapping basis states to their indices
         U: The on-site interaction strength
     Returns:
-        The interaction terms Hamiltonian matrix
+        The on-site interaction terms Hamiltonian matrix
     """
     dim = len(basis)
     HH = scipy.sparse.lil_matrix((dim, dim), dtype=np.complex128)
@@ -99,15 +95,16 @@ def create_hopping_matrix(
     t: float,
     PBC: bool = True,
 ) -> SparseMatrix:
-    """Creates the hopping terms for the Hubbard Hamiltonian matrix based on the given basis and index mapping.
+    """Create the nearest-neighbor hopping matrix for the Spin-½ Fermi-Hubbard model.
+    Includes proper fermionic anticommutation signs.
     Args:
         basis: The basis states for the system
         index_map: A dictionary mapping basis states to their indices
         L: The length of the chain
-        t: The hopping amplitude
+        t: The nearest-neighbor hopping amplitude
         PBC: Whether to use periodic boundary conditions
     Returns:
-        The hopping terms Hamiltonian matrix
+        The hopping terms Hamiltonian matrix (not yet symmetrized for Hermiticity)
     """
     dim = len(basis)
     HH_hop = scipy.sparse.lil_matrix((dim, dim), dtype=np.complex128)
@@ -144,16 +141,17 @@ def bm_create_base_hamiltonian(
     U: float,
     PBC: bool = True,
 ) -> SparseMatrix:
-    """Construct the Hamiltonian matrix for a 1D chain in the Hubbard model. Only hops to the right are calculated and HH later symmetrized.
+    """Construct the full Hamiltonian matrix for the Spin-½ Fermi-Hubbard model.
+    Combines on-site interaction and nearest-neighbor hopping terms with proper symmetrization.
     Args:
         basis: The basis states for the system
         index_map: A dictionary mapping basis states to their indices
         L: The length of the chain
-        t: The hopping amplitude
+        t: The nearest-neighbor hopping amplitude
         U: The on-site interaction strength
         PBC: Whether to use periodic boundary conditions
     Returns:
-        The H_0 Hamiltonian matrix in sparse format
+        The full Hamiltonian matrix in sparse format
     """
 
     HH_int = create_interaction_matrix(basis, index_map, U)
@@ -177,7 +175,9 @@ def bm_create_base_hamiltonian(
 def bm_get_eigenstates(
     HH: scipy.sparse.spmatrix, num_evals: int
 ) -> tuple[NDArray[np.float64], NDArray[np.complex128]]:
-    """Return the eigenvalues and vectors of the given HH matrix, sorted in ascending order."""
+    """Compute low-lying eigenvalues and eigenvectors using sparse Lanczos diagonalization.
+    Returns sorted in ascending order of energy.
+    """
     evals, evecs = scipy.sparse.linalg.eigsh(HH, k=num_evals, which="SA")
     idx = np.argsort(evals)
     return evals[idx], evecs[:, idx]

@@ -1,4 +1,4 @@
-"""Solve a 1D chain in the Hubbard model using exact diagonalization"""
+"""Hamiltonian construction and diagonalization for the Spin-½ Fermi-Hubbard model using exact diagonalization."""
 
 import numpy as np
 from numpy.typing import NDArray
@@ -35,7 +35,9 @@ def annihilation_operator(state: NDArray, site: int, spin: int):
 
 
 def check_fermionic_sign(state, site_from, site_to, spin):
-    """Calculate the fermionic sign for hopping an electron from site_from to site_to with a given spin."""
+    """Calculate the fermionic anticommutation sign for hopping in the Spin-½ Fermi-Hubbard model.
+    Counts occupied sites between site_from and site_to to determine the sign.
+    """
     start, end = min(site_from, site_to), max(site_from, site_to)
 
     count = 0
@@ -61,7 +63,9 @@ def check_fermionic_sign(state, site_from, site_to, spin):
 
 
 def hamiltonian(N: int, L: int, t: float, U: float):
-    """Construct the Hamiltonian matrix for the Hubbard model"""
+    """Construct the Hamiltonian matrix for the Spin-½ Fermi-Hubbard model with on-site interaction.
+    Uses nearest-neighbor hopping and on-site repulsion.
+    """
     basis, index_map = basis_states(N, L)
     dim = len(basis)
     HH = scipy.sparse.lil_matrix((dim, dim), dtype=np.float64)

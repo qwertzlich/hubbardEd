@@ -1,12 +1,12 @@
-"""Module for generating the basis states for the Hubbard model."""
+"""Basis state generation for the Spin-½ Fermi-Hubbard model."""
 
 from itertools import product
 import numpy as np
 
 
 def basis_states(N: int, L: int):
-    """Generate the basis states for N electrons in L sites
-    0 -> empty, 1 -> Spin Up, 2 -> Spin Down, 3 -> Double Occupancy
+    """Generate the basis states for the Spin-½ Fermi-Hubbard model with N electrons in L sites.
+    Encodes each site with occupation values: 0 (empty), 1 (spin-up), 2 (spin-down), 3 (double occupancy).
     """
     electron_lookup = (0, 1, 1, 2)  # Lookup table for number of electrons in each state
     states = list(product([0, 1, 2, 3], repeat=L))

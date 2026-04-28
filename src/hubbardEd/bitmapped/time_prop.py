@@ -1,44 +1,29 @@
-"""This module contains functions for time propagation of given quantum states under the Hubbard Hamiltonian using a bitmapped representation"""
+"""Time propagation for the Spin-½ Fermi-Hubbard model under external gauge fields using bitmapped representation."""
 
 import numpy as np
-from numpy.typing import NDArray
-from typing import Callable, Literal, TypeAlias, TypedDict
 from scipy.constants import hbar, e
 import scipy.sparse
 from .basis import bitmap_basis_states
 from .hamiltonian import create_hopping_matrix, create_interaction_matrix
 from .utils import check_bit
 
-
-BasisState: TypeAlias = tuple[int, int]
-BasisArray: TypeAlias = NDArray[np.int64]
-IndexMap: TypeAlias = dict[BasisState, int]
-SparseMatrix: TypeAlias = scipy.sparse.csr_matrix
-GaugeChoice: TypeAlias = Literal["velocity", "length"]
-GaugeField: TypeAlias = Callable[[float], float]
-StateVector: TypeAlias = NDArray[np.complex128]
-
-
-class HubbardParams(TypedDict):
-    L: int
-    PBC: bool
-    e_charge: float
-    hbar: float
-
-
-class HubbardSystem(TypedDict):
-    H_int: SparseMatrix
-    H_hop: SparseMatrix
-    R_op: SparseMatrix
-    basis: BasisArray
-    index_map: IndexMap
-    Params: HubbardParams
+from .types import (
+    BasisArray,
+    GaugeChoice,
+    GaugeField,
+    HubbardSystem,
+    IndexMap,
+    SparseMatrix,
+    StateVector,
+)
 
 
 def create_position_matrix(
     basis: BasisArray, index_map: IndexMap, L: int
 ) -> SparseMatrix:
-    """Creates a diagonal matrix representing the position operator sum(i * n_i)."""
+    """Create the position operator diagonal matrix sum_i (i * n_i) for both spins.
+    Used in length gauge formulation of external fields.
+    """
     dim = len(basis)
     R_op = scipy.sparse.lil_matrix((dim, dim), dtype=np.complex128)
 
@@ -66,14 +51,19 @@ def setup_hubbard_system(
     e_charge: float = e,
     hbar_val: float = hbar,
 ) -> HubbardSystem:
-    """Set up the Hubbard Hamiltonian matrix for a given system configuration.
+    """Set up the Spin-½ Fermi-Hubbard Hamiltonian and related operators for time evolution.
+    Precomputes interaction, hopping, and position operators.
     args:
         N_up: Number of spin-up electrons
         N_down: Number of spin-down electrons
         L: Number of lattice sites
-        t: Hopping amplitude
+        t: Nearest-neighbor hopping amplitude
         U: On-site interaction strength
         PBC: Whether to use periodic boundary conditions
+        e_charge: Elementary charge (for gauge field coupling)
+        hbar_val: Planck constant (for dynamics)
+    returns:
+        Dictionary containing precomputed operators (H_int, H_hop, R_op, basis, index_map, parameters)
     """
     basis, index_map = bitmap_basis_states(L, N_up, N_down)
     HH_int = create_interaction_matrix(basis, index_map, U)
@@ -98,7 +88,10 @@ def time_evolve_state(
     tf: float,
     num_points: int,
 ) -> StateVector:
-    """Time evolve a given state under the time dependent Hubbard Hamiltonian."""
+    """Time-evolve a quantum state under the Spin-½ Fermi-Hubbard Hamiltonian with external gauge fields.
+    Supports velocity and length gauges for electric field coupling.
+    Returns the evolved state at time tf.
+    """
     params = system["Params"]
 
     time_points = np.linspace(t0, tf, num_points, endpoint=False)

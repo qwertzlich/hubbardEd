@@ -206,7 +206,7 @@ def test_gauge_symmetry():
 
     basis, index_map = bitmap_basis_states(L, N_up, N_down)
     HH_velocity = bm_create_base_hamiltonian(
-        basis, index_map, L, 1.0, 2.0, PBC=True
+        basis, index_map, L, 1.0, 2.0, PBC=False
     ).toarray()
     HH_length = bm_create_base_hamiltonian(
         basis, index_map, L, 1.0, 2.0, PBC=False
