@@ -1,127 +1,155 @@
 # HubbardEd
 
-HubbardEd is a Python project for exact diagonalization of the 1D Fermi-Hubbard model on small lattices.  
-It includes two implementations of the same physics:
+This project was developed with assistance from AI tools during documentation and code cleanup.
 
-- an analog, occupation-value representation (simple and explicit), and
-- a bitmapped representation (more efficient and scalable for fixed spin sectors).
+HubbardEd is a Python project for exact diagonalization of Hubbard-type models on small lattices. It provides implementations of two different physics models, each with one or more computational backends for evaluating ground states, low-energy spectra, observables, and time-evolved dynamics.
 
-The code is useful for studying strongly correlated lattice electrons in finite systems, validating small analytical results, and prototyping observables and driven dynamics before moving to larger-scale methods.
+## Physical models
 
-## Physical model
+### Model 1: Spin-½ Fermi-Hubbard model (Analog & Bitmapped backends)
 
-The implemented Hamiltonian is the standard single-band 1D Hubbard model:
+The standard 1D Fermi-Hubbard model with repulsive on-site interaction:
 
 $$
 H = -t \sum_{\langle i,j \rangle,\sigma} \left(c^\dagger_{i\sigma} c_{j\sigma} + h.c.\right) + U \sum_i n_{i\uparrow} n_{i\downarrow}
 $$
 
-with:
-
+where:
 - $t$: nearest-neighbor hopping amplitude,
 - $U$: on-site interaction strength,
-- $\sigma \in \{\uparrow, \downarrow\}$: spin index.
+- $\sigma \in \{\uparrow, \downarrow\}$: spin index,
+- $n_{i\sigma} = c^\dagger_{i\sigma} c_{i\sigma}$: occupation number.
 
-Both periodic boundary conditions (PBC) and open boundary conditions (OBC) are supported in the bitmapped backend.
+Both periodic boundary conditions (PBC) and open boundary conditions (OBC) are supported.
 
-## What this project is useful for
-
+**Use cases:**
 - Exploring few-site Hubbard physics in a transparent way.
 - Ground-state and low-energy spectrum calculations.
 - Testing fermionic sign conventions and basis encodings.
-- Computing simple correlation observables (doublons, long-range charge correlation).
-- Studying time evolution under external fields in velocity and length gauges.
-- Building a baseline reference for future tensor-network or mean-field implementations.
+- Computing correlation observables (doublons, long-range particle correlations).
+- Studying time evolution under external fields.
+- Validating tensor-network or mean-field implementations.
+
+### Model 2: Spinless fermions with nearest-neighbor interactions coupled to cavity modes (Cavity backend)
+
+A model of spinless fermions with nearest-neighbor interactions coupled to a quantized cavity mode via the quantized Peierls substitution in Coulomb gauge:
+
+$$
+\begin{aligned}
+H &= -t_h \sum_{j=1}^L \left(e^{i g/\sqrt{L}(a + a^\dagger)} c_j^\dagger c_{j+1} + h.c.\right) +\\ 
+&U \sum_{j=1}^{L} \left(n_j - \frac{1}{2}\right)\left(n_{j+1} - \frac{1}{2}\right) + \Omega a^\dagger a
+\end{aligned}
+$$
+
+where:
+- $L$: number of lattice sites,
+- $t_h$: hopping amplitude,
+- $U$: nearest-neighbor interaction strength,
+- $g$: light-matter coupling strength,
+- $\Omega$: cavity photon frequency,
+- $a^\dagger, a$: photon creation and annihilation operators,
+- $n_j = c_j^\dagger c_j$: fermion number operator at site $j$.
+
+The full Hilbert space is the tensor product of the photonic (Fock) and electronic spaces: $|n_{\text{ph}}\rangle \otimes |n_{\text{el}}\rangle$.
+
+**Use cases:**
+- Studying light-matter interactions in strongly correlated systems.
+- Exploring polariton physics in cavity-coupled fermionic chains.
+- Computing correlation functions in coupled electron-photon systems.
 
 ## Project structure
 
 ```
 src/hubbardEd/
 	analog/
-		basis.py        # Occupation-based basis generation
+		basis.py        # Occupation-based basis generation (Spin-½ Hubbard)
 		hamiltonian.py  # Operator construction and sparse Hamiltonian
 	bitmapped/
-		basis.py        # Bit-encoded spin-up/down basis states
-		hamiltonian.py  # Sparse hopping + interaction matrices
+		basis.py        # Bit-encoded spin-up/down basis states (Spin-½ Hubbard)
+		hamiltonian.py  # Sparse hopping + on-site interaction matrices
 		observables.py  # Doublon and long-range correlation expectation values
-		time_prop.py    # Time evolution and gauge-dependent dynamics
+		time_prop.py    # Time evolution under external gauge fields
 		utils.py        # Bit utilities
+	cavity/
+		basis_cav.py        # Spinless fermion basis generation
+		hamiltonian_cav.py  # Cavity-coupled Hamiltonian with quantized Peierls substitution
+		observables_cav.py  # Long-range charge correlation observable
 
 tests/
 	test_analog.py
 	test_bitmapped.py
+	test_cavity.py
 ```
 
-## How it works
+## Implementation details
 
-The computational flow is:
+### Basis construction
 
-1. Build a many-body basis in a fixed particle sector.
-2. Construct sparse Hamiltonian terms:
-	 - interaction part (diagonal in basis),
-	 - hopping part with fermionic sign handling.
-3. Form the full Hamiltonian and diagonalize low-energy states.
-4. Evaluate observables from eigenvectors or propagated states.
-5. (Optional) propagate in time under a gauge field.
+**Analog backend** (`analog/basis.py`):
+- Encodes each site with occupation values: `0` (empty), `1` (spin-up), `2` (spin-down), `3` (double occupancy).
+- Generates product states and filters by total electron number $N$.
 
-### 1) Basis construction
+**Bitmapped backend** (`bitmapped/basis.py`):
+- Represents each basis state as $(n_{\uparrow}, n_{\downarrow})$ where each is a bitmask with one bit per site.
+- Fixes $N_{\uparrow}$ and $N_{\downarrow}$ independently.
+- Hilbert space dimension: $\dim = \binom{L}{N_{\uparrow}} \binom{L}{N_{\downarrow}}$.
 
-- Analog backend (`analog/basis.py`):
-	- encodes each site with values `0` (empty), `1` (up), `2` (down), `3` (double occupancy),
-	- filters product states by total electron number `N`.
+**Cavity backend** (`cavity/basis_cav.py`):
+- Generates spinless fermion basis states via bitmapped representation (fixed fermion number $N_f$).
+- Photonic basis (Fock states from 0 to $N_{\text{photons}}$) is constructed during Hamiltonian assembly.
+- Full Hilbert space is the tensor product: $\dim = \binom{L}{N_f} \times (N_{\text{photons}} + 1)$.
 
-- Bitmapped backend (`bitmapped/basis.py`):
-	- stores each basis state as `(up_bits, down_bits)`,
-	- fixes `N_up` and `N_down` independently,
-	- Hilbert dimension is
-		$$
-		\dim = \binom{L}{N_{\uparrow}}\binom{L}{N_{\downarrow}}.
-		$$
+### Hamiltonian assembly
 
-### 2) Hamiltonian assembly
+**Spin-½ Hubbard backends** (Analog & Bitmapped):
+- **On-site interaction:** Counts double occupancy and adds $U \times (\text{doublon count})$ to diagonal.
+- **Hopping term:** Applies nearest-neighbor hops $c^\dagger_{i\sigma} c_{j\sigma} + h.c.$ with correct fermionic sign.
+  - Analog backend: Uses explicit anticommutation rules via `check_fermionic_sign`.
+  - Bitmapped backend: Constructs right-hopping only, then adds Hermitian conjugate.
 
-- Interaction term: counts doublons and adds `U * N_doublon` on the diagonal.
-- Hopping term: applies nearest-neighbor hops and multiplies by the correct fermionic sign.
-- In the bitmapped backend, right hops are constructed and then Hermitian-conjugated to include left hops.
+**Cavity backend**:
+- **Nearest-neighbor interaction:** Uses particle-hole-symmetric formulation with factors $(n_i - \frac{1}{2})(n_{i+1} - \frac{1}{2})$.
+- **Hopping term:** Spinless fermion hopping with fermionic signs.
+- **Cavity coupling:** Uses exponential displacement operators $e^{\pm i g/\sqrt{L}(a + a^\dagger)}$ applied to hopping terms.
+- **Photon frequency:** Contributes diagonal energy $\Omega \times n_{\text{photons}}$.
 
-### 3) Eigenstates
+### Eigenstate computation
 
-- `bm_get_eigenstates` computes low-lying eigenpairs using sparse Lanczos (`scipy.sparse.linalg.eigsh`).
+Both backends use sparse Lanczos diagonalization (`scipy.sparse.linalg.eigsh`) to compute low-lying eigenpairs.
 
-### 4) Observables
+### Observables
 
-- `get_doublon_expectation`: site-resolved
-	$$\langle n_{i\uparrow} n_{i\downarrow} \rangle$$
-	from a state vector.
-- `get_LRC_expectation`: long-range charge correlation between site `0` and site `L/2`.
+**Spin-½ Hubbard backends** (`bitmapped/observables.py`):
+- **Doublon expectation:** Site-resolved $\langle n_{i\uparrow} n_{i\downarrow} \rangle$.
+- **Long-range charge correlation:** $\langle n_0 n_{L/2} \rangle$ (between site 0 and middle site).
 
-### 5) Time propagation
+**Cavity backend** (`cavity/observables_cav.py`):
+- **Site correlation:** Long-range charge correlation $\langle n_i n_j \rangle$ between arbitrary sites $i$ and $j$, computed in the full electron-photon Hilbert space.
 
-`bitmapped/time_prop.py` provides:
+### Time propagation
 
-- `setup_hubbard_system(...)` to precompute operators,
-- `time_evolve_state(...)` to propagate using midpoint sampling and
-	`scipy.sparse.linalg.expm_multiply`.
+**Bitmapped backend** (`bitmapped/time_prop.py`):
+- Provides Hamiltonian setup and time evolution under velocity or length gauge fields.
+- Uses midpoint sampling and matrix exponential propagation (`scipy.sparse.linalg.expm_multiply`).
 
-Supported gauges:
-
-- `velocity`: complex Peierls phase on hopping terms,
-- `length`: scalar potential from position operator (only for OBC).
-
+**Supported gauges:**
+- `velocity`: Complex Peierls phase on hopping terms.
+- `length`: Scalar potential from position operator (OBC only).
 
 ## Testing and validation
 
-The test suite verifies core physics and numerics in both backends, including:
+The test suite verifies core physics and numerics:
 
-- basis dimensions,
-- creation/annihilation and hopping operators,
-- fermionic sign rules,
-- Hermiticity/symmetry of Hamiltonians,
-- known small-system matrix blocks and eigenvalues,
-- norm preservation and gauge consistency in time propagation.
+- Basis dimensions and orthonormality.
+- Creation/annihilation and hopping operator correctness.
+- Fermionic sign rules and anticommutation relations.
+- Hermiticity and symmetry of Hamiltonians.
+- Known small-system matrix elements and eigenvalues.
+- Norm preservation and gauge consistency in time propagation.
 
 Run tests with:
 
 ```bash
-python3 -m pytest 
+python3 -m pytest
 ```
+
